@@ -1,0 +1,99 @@
+from random import choice
+
+import telebot
+from telebot import types
+
+token = '5363826534:AAHPat049P4CGg7H8vAtucRrRusXa7X_vy4'
+
+bot = telebot.TeleBot(token)
+
+
+RANDOM_TASKS = ['спортить', 'не спортить']
+
+tasks = {
+    }
+
+
+HELP = '''
+На данный момент этот бот - планер и вот что он умеет:
+✨ /todo, /add - добавить задачу на определенную дату, например, "/add 01.01.2023 не проспать новый год"
+✨ /print, /show  - напечать все задачи на заданную дату, например, "/show 01.01.2023"
+✨ /random - данная задача определит заниматься тебе спортом сегодня или нет и добавит данную задачу на дату "сегодня"
+✨ /help - Напечатать help
+P.S. "сегодня" - это тоже дата, можешь ее хоть капсом напечатать, он тебя поймет и напишет на СеГоДнЯ твою новую задачу
+'''
+
+
+def add_todo(date, task):
+    date = date.lower()
+    if date in tasks:
+        tasks[date].append(task)
+    else:
+        tasks[date] = []
+        tasks[date].append(task)
+
+
+
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard = True)
+    item1 = types.KeyboardButton('Записать задание')
+    item2 = types.KeyboardButton('Показать задание')
+    item3 = types.KeyboardButton('Спорт - это жизнь')
+    item4 = types.KeyboardButton('помогите')
+
+    markup.add(item1, item2, item3, item4)
+
+    bot.send_message(message.chat.id, 'Привет, {0.first_name}!'.format(message.from_user), reply_markup = markup)
+
+
+@bot.message_handler(commands=['help'])
+def help(message):
+    bot.send_message(message.chat.id, HELP)
+
+
+@bot.message_handler(commands=['random'])
+def random(message):
+    task = choice(RANDOM_TASKS)
+    add_todo('сегодня', task)
+    bot.send_message(message.chat.id, f'Задача {task} добавлена на сегодня')
+
+
+@bot.message_handler(commands=['add', 'todo'])
+def add(message):
+    command = message.text.split(maxsplit=2)
+    task = command[2]
+    date = command[1]
+    add_todo(date, task)
+    bot.send_message(message.chat.id, f'Задача {task} добавлена на дату {date}')
+
+
+@bot.message_handler(commands=['show', 'print'])
+def show(message):
+    command = message.text.split(maxsplit = 1)
+    date = command[1].lower()
+    text = ''
+    if date in tasks:
+        text = date.upper() + '\n'
+        for task in tasks[date]:
+            text += f'🚽 {task}\n'
+    else:
+        text = 'Такой даты нет'
+    bot.send_message(message.chat.id, text)
+
+@bot.message_handler(content_types=['text'])
+def echo(message):
+    if message.text == "помогите":
+        help(message)
+    elif message.text == "Спорт - это жизнь":
+        random(message)
+    elif message.text == "Записать задание":
+        bot.send_message(message.chat.id, 'Оформи свое сообщение следующим образом: "/add 01.01.2023 не проспать новый год"')
+    elif message.text == "Показать задание":
+        bot.send_message(message.chat.id, 'Оформи свое сообщение следующим образом: "/show 01.01.2023"')
+    else:
+        text = 'Сам ты ' + message.text.upper() + '!!!'
+        bot.send_message(message.chat.id, text)
+
+bot.polling(none_stop=True)
