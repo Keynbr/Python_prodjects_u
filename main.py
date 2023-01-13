@@ -9,16 +9,27 @@ for x in lines[1:]:
    l_str[i] = str
    i += 1
 print(l_str)
-x = (100*5 + 17) % 11 + 1
 y = (100*5 + 17) % 3 + 12
 exam = l_str[:, y]
-param = l_str[:, x]
+exam.shape = (len(exam),1)
+param = l_str[:, 1:12]
+def norm(x):
+   normir = np.empty((3, 11))
+   for N in range(11):
+      srAr = np.mean(x, axis=0)
+      Pmax = np.max(x, axis=0)
+      Pmin = np.min(x, axis=0)
+      normir[0, :] = srAr
+      normir[1, :] = Pmax
+      normir[2, :] = Pmin
+      x[:, N] = (x[:, N]-srAr[N])/(Pmax[N]-Pmin[N])
+   return x, normir
+param, normir = norm(param)
+X = np.ones((len(param), 1))
+param1 = np.hstack((X, param))
 
 def gipoteza(x,theta):
-   X = np.empty((len(x), 2))
-   X[:, 0] = 1
-   X[:, 1] = x[:, 0]
-   h = X @ theta
+   h = x @ theta
    return h
 
 def stoimosti(x,theta,y):
@@ -27,44 +38,55 @@ def stoimosti(x,theta,y):
    J = ((h-y)**2).sum()/(2*N)
    return J
 
-def proizv1(x,theta,y):
+def proizv(x,theta,y):
    h = gipoteza(x, theta)
-   J_proizv1 = np.empty(2)
-   J_proizv1[0] = (h - y).sum()
-   J_proizv1[1] = ((h - y)*x).sum()
-   J_proizv1 = J_proizv1 / len(y)
-   return J_proizv1
+   x1 = x.transpose()
+   J_proizv = x1 @ (h - y) / len(y)
+   return J_proizv
 
 def grad(x,theta,y):
    lyam = 0.01
+   arr = []
+   arr1 = []
+   np.append(arr1, 1)
+   st1 = 2
+   st2 = 1
    k = 0
-   arr = np.empty((1000, 4))
-   while k < 1000:
-      #print(k, x, y, p(x), s(y), f(x, y))
-      dJ = proizv1(x, theta, y)
-      st = stoimosti(x, theta, y)
-      theta[0] -= lyam * dJ[0]
-      theta[1] -= lyam * dJ[1]
-      arr[k,0] = k
-      arr[k,1] = st
-      arr[k,2] = theta[0]
-      arr[k,3] = theta[1]
+   while st1 - st2 > (0.001) / st2:
+      dJ = proizv(x, theta, y)
+      st1 = stoimosti(x, theta, y)
+      arr.append(st1)
+      a = (theta.copy())
+      arr1.append(a)
+      theta -= lyam * dJ
+      st2 = stoimosti(x, theta, y)
       k += 1
-   return theta, arr
+   return arr1, arr
 
-param.shape = (len(param),1)
-exam.shape = (len(exam), 1)
-#print(grad(param, np.array([[0.],[0.]]), exam))
-thetas, hod = grad(param, np.array([[0.],[0.]]), exam)
-plt.subplot(221)
-plt.scatter(param, exam)
-xx = np.arange(param.min(), param.max())
-h1 = gipoteza(param,thetas)
-plt.plot(param,h1)
-plt.subplot(222)
-plt.plot(hod[:,0],hod[:,1])
-plt.subplot(223)
-plt.plot(hod[:,0],hod[:,2])
-plt.subplot(224)
-plt.plot(hod[:,0],hod[:,3])
+thetas, stoim= grad(param1, np.array([[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.]]), exam)
+print()
+plt.plot(range(len(stoim)), stoim)
+plt.grid(True)
+plt.title('Зависимость функции стоимости от количества итераций')
 plt.show()
+arr = []
+for i in range(11):
+   for x in thetas:
+      arr.append(float(x[i]))
+   np.array(arr)
+   plt.plot(range(len(stoim)), arr, c=np.random.rand(3,))
+   plt.grid(True)
+   arr.clear()
+plt.title(f'Зависимость коэффициентов тет от количества итераций')
+plt.show()
+
+k = 100*5 + 17
+X = [k % 5,  3*k % 5,  k % 4 + 1, 3*k % 4 + 1, 4*k % 5 + 1, 2*k % 5 + 1, (5 - 3*k) % 5 + 1, 3*k % 5 + 1, k % 5 + 1, 2*k % 5 + 1,  int(k * k / 1000)]
+
+for i in range(11):
+   X[i] = (X[i]-normir[0, i])/(normir[1, i]-normir[2, i])
+   i += 1
+X = np.hstack(([1], X))
+theta = thetas[-1]
+
+print('ученик получит оценку:', X @ theta)
